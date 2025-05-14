@@ -48,7 +48,7 @@ public static class Helpers
                         dicoveredServices.Remove(oldService);
 
                     dicoveredServices.Add(serviceInfo);
-                    Console.WriteLine($"Discovored service {serviceInfo.ID} on address {serviceInfo.IpAddresses[0]}:{serviceInfo.Port}.");
+                    Console.WriteLine($"Discovored service {serviceInfo.FriendlyName} on address {serviceInfo.IpAddresses[0]}:{serviceInfo.Port}.");
                 }
             }
         }
@@ -56,22 +56,19 @@ public static class Helpers
 
     public static async Task RestockAsync(HttpClient client, List<Medication> stock, List<EquipmentWithAddress> discoveredServices, int minimalQuantity, EquipmentInfo thisInfo)
     {
-        if (stock.Any(a => !a.WholePack && a.UnitQuantity < minimalQuantity))
-            return;
-        
         var restockingServices = discoveredServices.Where(w => w.PacksSupported ?? false);
-        var emptyMedicine = stock.Where(w => !w.WholePack && w.UnitQuantity < minimalQuantity);
+        var emptyMedicine = stock.Where(w => !w.WholePack).GroupBy(g => g.PC).Where(g => g.Sum(x => x.UnitQuantity) < minimalQuantity).Select(s => s.Key);
 
         foreach (var medicine in emptyMedicine)
         {
-            Console.WriteLine($"Restocking medicine PC: {medicine.PC} ...");
+            Console.WriteLine($"Restocking medicine PC: {medicine} ...");
             Medication? newMedicine = null;
 
             foreach (var service in restockingServices)
             {
                 try
                 {
-                    var response = await client.GetAsync($"http://{service.IpAddresses}:{service.Port}/inventory?PC={medicine.PC}");
+                    var response = await client.GetAsync($"http://{service.IpAddresses[0]}:{service.Port}/inventory?PC={medicine}");
                     var inventory = await response.Content.ReadFromJsonAsync<MedicationTransaction>();
                     if (inventory?.Medications.Any(a => a.WholePack) ?? false)
                     {
@@ -81,7 +78,7 @@ public static class Helpers
                             Sender = thisInfo,
                             Medications = [inventory.Medications.Where(w => w.WholePack).OrderBy(o => o.Exp).First()],
                         };
-                        var dispenseResponse = await client.PostAsJsonAsync($"http://{service.IpAddresses}:{service.Port}/dispense", request);
+                        var dispenseResponse = await client.PostAsJsonAsync($"http://{service.IpAddresses[0]}:{service.Port}/dispense", request);
                         var dispenseResult = await dispenseResponse.Content.ReadFromJsonAsync<MedicationTransaction>();
 
                         if (dispenseResult?.Medications.Any() ?? false)
@@ -95,7 +92,7 @@ public static class Helpers
                             }
                             else
                             {
-                                Console.WriteLine($"Unable to restock medicine PC: {medicine.PC}.");
+                                Console.WriteLine($"Unable to restock medicine PC: {medicine}.");
                             }
 
                             break;

@@ -43,37 +43,24 @@ partial class HomePage : Component<HomePageState>
         .Shadow(new MauiReactor.Shadow().Brush(Brush.DimGray).Offset(5, 5).Radius(10))
         .BackgroundColor(Colors.White)
         .OnTapped(async () => await Navigation.PushAsync<StockPage, StockPageProps>(p => p.Server = server));
-
-#if !IOS && !MACCATALYST
-    protected override async void OnMounted()
-    {
-        // For iOS and MacCatalyst it needs com.apple.developer.networking.multicast entitlement.
-        await ZeroconfResolver.ListenForAnnouncementsAsync(async (s) => await ParseHost(s.Host), default);
-        await ResolveDomainAsync();
-        base.OnMounted();
-    }
-# else
     protected override void OnMounted()
     {
         _ = Task.Run(async () => 
         {
             while (true)
             {
-                if (State.Appeared)          
-                    await MainThread.InvokeOnMainThreadAsync(ResolveDomainAsync);
-
+                await ResolveDomainAsync();
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
         });
         base.OnMounted();
     }
-#endif
 
     private async Task ResolveDomainAsync()
     {
         try
         {
-            var hosts = await ZeroconfResolver.ResolveAsync("_interopearbility._tcp");
+            var hosts = await ZeroconfResolver.ResolveAsync("_interopearbility._tcp.local.");
             if (hosts is null)
                 return;
 
@@ -98,6 +85,7 @@ partial class HomePage : Component<HomePageState>
                 try
                 {
                     response = await httpClient.GetFromJsonAsync<EquipmentWithAddress>($"http://{address}:{port}/info");
+                    break;
                 }
                 catch 
                 {
@@ -115,7 +103,11 @@ partial class HomePage : Component<HomePageState>
             if (current is not null)
                 State.DiscoveredServices.Remove(current);
 
-            SetState(s => s.DiscoveredServices.Add(response));
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (State.Appeared)
+                    SetState(s => s.DiscoveredServices.Add(response));
+            });
         }
     }
 }

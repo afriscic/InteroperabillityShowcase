@@ -40,6 +40,9 @@ public static class Mocks
         List<Medication> medicationStock = [];
         var random = new Random();
 
+        if (!generateUnit && !generatePack)
+            generateUnit = true;
+
         foreach (var medicationInfo in medicationInfos)
         {
             if (generateUnit)
