@@ -24,7 +24,7 @@ partial class StockPage : Component<StockPageState, StockPageProps>
 
     public override VisualNode Render() => 
         ContentPage(
-            ToolbarItem("Order").OnClicked(async () => await OrderMedicationsAsync()),
+            ToolbarItem("Order").OnClicked(OrderMedicationsAsync),
             CollectionView().ItemsSource(State.MedicationViews, RenderStock) 
         )
         .Title("Stock");

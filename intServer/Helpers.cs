@@ -1,11 +1,12 @@
 using intShared;
 using Makaretu.Dns;
+using System.Collections.Concurrent;
 
 namespace intServer;
 
 public static class Helpers
 {
-    public static async Task ParseDiscoveredService(ServiceInstanceDiscoveryEventArgs serviceInstance, List<EquipmentWithAddress> dicoveredServices, EquipmentInfo thisInfo, HttpClient httpClient)
+    public static async Task ParseDiscoveredService(ServiceInstanceDiscoveryEventArgs serviceInstance, ConcurrentDictionary<Guid, EquipmentWithAddress> dicoveredServices, EquipmentInfo thisInfo, HttpClient httpClient)
     {
         if (serviceInstance.ServiceInstanceName.Labels.Any(a => a.Contains("interopearbility")) &&
         Guid.TryParse(serviceInstance.ServiceInstanceName.Labels[0], out var instanceId) &&
@@ -43,20 +44,17 @@ public static class Helpers
                     serviceInfo.IpAddresses = newService.IpAddresses;
                     serviceInfo.Port = newService.Port;
 
-                    var oldService = dicoveredServices.FirstOrDefault(f => f.ID == serviceInfo.ID);
-                    if (oldService is not null)
-                        dicoveredServices.Remove(oldService);
-
-                    dicoveredServices.Add(serviceInfo);
+                    dicoveredServices.Remove(serviceInfo.ID, out _);
+                    dicoveredServices.TryAdd(serviceInfo.ID, serviceInfo);
                     Console.WriteLine($"Discovored service {serviceInfo.FriendlyName} on address {serviceInfo.IpAddresses[0]}:{serviceInfo.Port}.");
                 }
             }
         }
     }
 
-    public static async Task RestockAsync(HttpClient client, List<Medication> stock, List<EquipmentWithAddress> discoveredServices, int minimalQuantity, EquipmentInfo thisInfo)
+    public static async Task RestockAsync(HttpClient client, List<Medication> stock, ConcurrentDictionary<Guid, EquipmentWithAddress> discoveredServices, int minimalQuantity, EquipmentInfo thisInfo)
     {
-        var restockingServices = discoveredServices.Where(w => w.PacksSupported ?? false);
+        var restockingServices = discoveredServices.Where(w => w.Value.PacksSupported ?? false).Select(s => s.Value);
         var emptyMedicine = stock.Where(w => !w.WholePack).GroupBy(g => g.PC).Where(g => g.Sum(x => x.UnitQuantity) < minimalQuantity).Select(s => s.Key);
 
         foreach (var medicine in emptyMedicine)
@@ -88,7 +86,7 @@ public static class Helpers
                             {
                                 newMedicine.WholePack = false;
                                 stock.Add(newMedicine);
-                                Console.WriteLine($"Restocked {newMedicine.PC}, with quantity {newMedicine.UnitQuantity} from {service.FriendlyName}.");
+                                Console.WriteLine($"Restocked {newMedicine.PC} with quantity {newMedicine.UnitQuantity} from {service.FriendlyName}.");
                             }
                             else
                             {
@@ -101,8 +99,11 @@ public static class Helpers
                 }
                 catch (Exception ex)
                 {
+                    if (service is null)
+                        return;
+
                     Console.WriteLine($"Restock error for service {service.FriendlyName} with message {ex.Message}");
-                    discoveredServices.Remove(service);
+                    discoveredServices.Remove(service.ID, out _);
                 }
             }
         }

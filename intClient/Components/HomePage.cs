@@ -19,6 +19,7 @@ partial class HomePage : Component<HomePageState>
     public override VisualNode Render() => 
         NavigationPage(
             ContentPage(
+                ToolbarItem("Refresh").OnClicked(ResolveDomainAsync),
                 CollectionView().ItemsSource(State.DiscoveredServices, RenderServer) 
             )
             .OnAppearing(() => State.Appeared = true)
@@ -43,16 +44,16 @@ partial class HomePage : Component<HomePageState>
         .Shadow(new MauiReactor.Shadow().Brush(Brush.DimGray).Offset(5, 5).Radius(10))
         .BackgroundColor(Colors.White)
         .OnTapped(async () => await Navigation.PushAsync<StockPage, StockPageProps>(p => p.Server = server));
-    protected override void OnMounted()
+    protected override async void OnMounted()
     {
-        _ = Task.Run(async () => 
-        {
-            while (true)
-            {
+        //_ = Task.Run(async () => 
+        //{
+        //    while (true)
+        //   {
                 await ResolveDomainAsync();
-                await Task.Delay(TimeSpan.FromSeconds(15));
-            }
-        });
+        //        await Task.Delay(TimeSpan.FromSeconds(15));
+        //    }
+        //});
         base.OnMounted();
     }
 
@@ -99,14 +100,16 @@ partial class HomePage : Component<HomePageState>
             response.IpAddresses = addresses;
             response.Port = port;
 
-            var current = State.DiscoveredServices.FirstOrDefault(f => f.ID == response.ID);
-            if (current is not null)
-                State.DiscoveredServices.Remove(current);
-
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 if (State.Appeared)
-                    SetState(s => s.DiscoveredServices.Add(response));
+                    SetState(s =>
+                    {
+                        var current = s.DiscoveredServices.FirstOrDefault(f => f.ID == response.ID);
+                        if (current is not null)
+                            s.DiscoveredServices.Remove(current);
+                        s.DiscoveredServices.Add(response);
+                    });
             });
         }
     }

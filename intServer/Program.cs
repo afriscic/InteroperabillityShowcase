@@ -1,6 +1,7 @@
 using Makaretu.Dns;
 using intShared;
 using intServer;
+using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
@@ -19,7 +20,7 @@ var info = new EquipmentInfo
     PacksSupported = app.Configuration.GetValue<bool>(nameof(EquipmentInfo.PacksSupported))
 };
 var minimalQuantity = app.Configuration.GetValue<int>("MinimalQuantity");
-var discoveredServices = new List<EquipmentWithAddress>();
+var discoveredServices = new ConcurrentDictionary<Guid, EquipmentWithAddress>();
 var medicineInfo = Mocks.Medications();
 var medicineStock = Mocks.MedicationStock(medicineInfo, info.UnitsSupported ?? false, info.PacksSupported ?? false);
 
