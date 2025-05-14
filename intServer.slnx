@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="intClient/intClient.csproj" />
+  <Project Path="intServer/intServer.csproj" />
+  <Project Path="intShared/intShared.csproj" />
+</Solution>
