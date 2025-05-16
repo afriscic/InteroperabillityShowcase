@@ -129,7 +129,7 @@ if (sd.Probe(service))
 else
 {
     sd.Advertise(service);
-    sd.Announce(service);
+    sd.Announce(service, 1);
 }
 sd.QueryServiceInstances("_interopearbility._tcp");
 

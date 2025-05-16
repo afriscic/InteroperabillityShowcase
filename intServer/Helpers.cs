@@ -79,7 +79,11 @@ public static class Helpers
                         var dispenseResponse = await client.PostAsJsonAsync($"http://{service.IpAddresses[0]}:{service.Port}/dispense", request);
                         var dispenseResult = await dispenseResponse.Content.ReadFromJsonAsync<MedicationTransaction>();
 
-                        if (dispenseResult?.Medications.Any() ?? false)
+                        Console.WriteLine($"Revieved dispensing conformation from {service.FriendlyName}.");
+
+                        await Task.Delay(5000);
+
+                        if (dispenseResult is not null && dispenseResult?.Medications.Count > 0)
                         {
                             newMedicine = dispenseResult.Medications.First();
                             if (newMedicine is not null)
