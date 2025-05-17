@@ -70,7 +70,7 @@ partial class StockPage : Component<StockPageState, StockPageProps>
             var response = await httpClient.GetFromJsonAsync<MedicationTransaction>($"http://{Props.Server.IpAddresses[0]}:{Props.Server.Port}/inventory");
             if (response is null)
                 return;
-            
+
             State.MedicationsStock = response.Medications;
 
             var views = new List<MedicationView>();
@@ -81,14 +81,17 @@ partial class StockPage : Component<StockPageState, StockPageProps>
                     Medication = State.MedicationInfos.First(f => f.PC == PC),
                     TotalQuantity = State.MedicationsStock.Where(w => w.PC == PC).Sum(s => s.UnitQuantity),
                     // This doesn't support mixed packs and unitdoses but could be easly added later
-                    WholePack = State.MedicationsStock.First(w => w.PC == PC).WholePack 
+                    WholePack = State.MedicationsStock.First(w => w.PC == PC).WholePack
                 };
                 views.Add(view);
             }
 
             SetState(s => s.MedicationViews = views);
         }
-        catch { }
+        catch (Exception)
+        { 
+            
+        }
     }
 
     private async Task OrderMedicationsAsync()

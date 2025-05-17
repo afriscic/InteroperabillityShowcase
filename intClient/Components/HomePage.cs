@@ -20,6 +20,8 @@ partial class HomePage : Component<HomePageState>
         NavigationPage(
             ContentPage(
                 ToolbarItem("Refresh").OnClicked(ResolveDomainAsync),
+                ToolbarItem("All stock").OnClicked(async () =>
+                    await Navigation.PushAsync<AllStockPage, AllStockPageProps>(p => p.Servers = [.. State.DiscoveredServices])),
                 CollectionView().ItemsSource(State.DiscoveredServices, RenderServer) 
             )
             .OnAppearing(() => State.Appeared = true)
