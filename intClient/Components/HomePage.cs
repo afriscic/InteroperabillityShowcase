@@ -48,14 +48,10 @@ partial class HomePage : Component<HomePageState>
         .OnTapped(async () => await Navigation.PushAsync<StockPage, StockPageProps>(p => p.Server = server));
     protected override async void OnMounted()
     {
-        //_ = Task.Run(async () => 
-        //{
-        //    while (true)
-        //   {
-                await ResolveDomainAsync();
-        //        await Task.Delay(TimeSpan.FromSeconds(15));
-        //    }
-        //});
+        //A listener can be implemented using ZeroconfResolver but it requires additional setup
+        //await ZeroconfResolver.ListenForAnnouncementsAsync();
+
+        await ResolveDomainAsync();
         base.OnMounted();
     }
 

@@ -29,12 +29,10 @@ Console.WriteLine($"{info.FriendlyName} with id {info.ID} starting...");
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-app.MapGet("/health", () => 
-    Results.Ok())
+app.MapGet("/health", () => Results.Ok())
 .WithName("Health");
 
-app.MapGet("/info", () => 
-    Results.Json(info))
+app.MapGet("/info", () => Results.Json(info))
 .WithName("Info");
 
 app.MapPost("/dispense", (MedicationTransaction request) =>
@@ -58,26 +56,32 @@ app.MapPost("/dispense", (MedicationTransaction request) =>
     
     foreach (var req in request.Medications)
     {
-        var stock = medicineStock.FirstOrDefault(f => f.PC == req.PC && f.Batch == req.Batch && f.SN == req.SN);
-        if (stock is null)
+        var medicineDispense = medicineStock.Where(w => w.PC == req.PC);
+        if (!string.IsNullOrEmpty(req.Batch))
+            medicineDispense = medicineDispense.Where(w => w.Batch == req.Batch);
+        if (!string.IsNullOrEmpty(req.SN))
+            medicineDispense = medicineDispense.Where(w => w.SN == req.SN);
+
+        var medicine = medicineDispense.OrderBy(o => o.Exp).FirstOrDefault();
+        if (medicine is null)
             return Results.NotFound($"Medicine for PC {req.PC} not in stock");
-        if (stock.UnitQuantity < req.UnitQuantity)
+        if (medicine.UnitQuantity < req.UnitQuantity)
             return Results.BadRequest($"Not enough stock for {req.PC}");
-        if (req.UnitQuantity < stock.UnitQuantity && stock.WholePack)
+        if (req.UnitQuantity < medicine.UnitQuantity && medicine.WholePack)
             return Results.BadRequest($"No unit quantity available for {req.PC}");
-        if (req.WholePack && req.UnitQuantity != stock.UnitQuantity)
+        if (req.WholePack && req.UnitQuantity != medicine.UnitQuantity)
             return Results.BadRequest($"Unit quantity must be equal to pack size for {req.PC}");
         
-        if (stock.UnitQuantity == req.UnitQuantity)
+        if (medicine.UnitQuantity == req.UnitQuantity)
         {
-            dispensedMedication.Add(stock);
-            medicineStock.Remove(stock);
+            dispensedMedication.Add(medicine);
+            medicineStock.Remove(medicine);
         }
         else
         {
             req.WholePack = false;
             dispensedMedication.Add(req);
-            stock.UnitQuantity -= req.UnitQuantity;
+            medicine.UnitQuantity -= req.UnitQuantity;
         }
     }
 
