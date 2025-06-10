@@ -64,14 +64,8 @@ app.MapPost("/dispense", (MedicationTransaction request) =>
 
         var medicine = medicineDispense.OrderBy(o => o.Exp).FirstOrDefault();
         if (medicine is null)
-            return Results.NotFound($"Medicine for PC {req.PC} not in stock");
-        if (medicine.UnitQuantity < req.UnitQuantity)
-            return Results.BadRequest($"Not enough stock for {req.PC}");
-        if (req.UnitQuantity < medicine.UnitQuantity && medicine.WholePack)
-            return Results.BadRequest($"No unit quantity available for {req.PC}");
-        if (req.WholePack && req.UnitQuantity != medicine.UnitQuantity)
-            return Results.BadRequest($"Unit quantity must be equal to pack size for {req.PC}");
-        
+            continue;
+
         if (medicine.UnitQuantity == req.UnitQuantity)
         {
             dispensedMedication.Add(medicine);
@@ -83,6 +77,13 @@ app.MapPost("/dispense", (MedicationTransaction request) =>
             dispensedMedication.Add(req);
             medicine.UnitQuantity -= req.UnitQuantity;
         }
+    }
+
+    if (dispensedMedication.Count == 0)
+    {
+        var response = $"No medications dispensed for {request.Sender.FriendlyName}.";
+        Console.WriteLine(response);
+        return Results.NotFound(response);
     }
 
     Console.WriteLine($"Successfully dispensed {dispensedMedication.Count} medications to {request.Sender.FriendlyName}.");
